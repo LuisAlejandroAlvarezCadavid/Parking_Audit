@@ -1,44 +1,33 @@
-﻿using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
-using System.Text;
+﻿using MediatR;
+using Microsoft.Extensions.Hosting;
+using ParkingAudit.Application.Commands;
+using ParkingAudit.Infrastructure.Entities;
+using ParkingAudit.Infrastructure.Ports;
+using System.Text.Json;
+
 
 namespace ParkingAudit.Worker
 {
     public class Worker : BackgroundService
     {
+        readonly IConfigureRabbitMq _configureRabbitMq;
+        readonly IMediator _mediator;
+        public Worker(IConfigureRabbitMq configureRabbitMq, IMediator mediator)
+        {
+            _configureRabbitMq = configureRabbitMq;
+            _mediator = mediator;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Console.WriteLine("SE COMIENZA A BUSCAR EL BROKER DE MENSAJERIA EN LA RED");
-            var factory = new ConnectionFactory { HostName = "localhost", UserName = "alejo", Password = "alejo" };
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
-
-            channel.QueueDeclare(queue: "hello",
-                                 durable: false,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
-
-            Console.WriteLine(" [*] Waiting for messages.");
-
-            var consumer = new EventingBasicConsumer(channel);
-
-            consumer.Received += HandlerMessages;
-            channel.BasicConsume(queue: "hello",
-                                 autoAck: true,
-                                 consumer: consumer);
-
-            Console.WriteLine("Presione enter para salir");
-            Console.ReadLine();
+            _configureRabbitMq._handdleRabbitMqEventMessages = HandlerMessages;
+            _configureRabbitMq.ConfgiAdnInitilizeRabbitMq();
         }
 
-        private void HandlerMessages(object? model, BasicDeliverEventArgs ea)
+        private async Task HandlerMessages(string message)
         {
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            Console.WriteLine($" [x] Received {message}");
+            var log = JsonSerializer.Deserialize<Logs>(message);
+            await _mediator.Send(new AddLogsQuery(log));
         }
     }
 }
