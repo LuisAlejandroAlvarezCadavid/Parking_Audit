@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ParkingAudit.Infrastructure.Adapters.Logs;
 using ParkingAudit.Infrastructure.DataContext;
 using ParkingAudit.Infrastructure.Extensions;
 using ParkingAudit.Worker;
@@ -24,6 +25,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddDbContextFactory<IntegracionDbContext>(opt => opt.UseSqlServer(configuration.GetConnectionString("ParkingDatabase")),
                     ServiceLifetime.Transient);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.Load("ParkingAudit.Application")));
+        services.AddTransient(typeof(AddLogsRepository));
     })
     .Build();
 
